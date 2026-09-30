@@ -49,7 +49,6 @@
                         <span class="esp-status" id="esp-status">E-Stop: connecting&hellip;</span>
                     </div>
 
-                    <h2 class="section-title">STOPWATCH</h2>
                     <div class="stopwatch-display" id="stopwatch-display">00:00.000</div>
                     <div class="stopwatch-controls">
                         <button class="btn btn-start" id="btn-start">START</button>
@@ -57,6 +56,7 @@
                         <button class="btn btn-stop" id="btn-stop" disabled>STOP</button>
                         <button class="btn btn-reset" id="btn-reset">RESET</button>
                     </div>
+                    <button class="btn-start-signal" id="btn-start-signal" aria-pressed="false" title="Robot started manually instead of from the start signal">Start Signal Skipped (+5s)</button>
                     <div class="lap-times-container" id="lap-times-container">
                         <div class="lap-times-header">
                             <span>Lap</span>
@@ -74,14 +74,14 @@
                     <div class="final-score" id="final-score">--:--</div>
                     <div class="score-breakdown" id="score-breakdown">
                         <div class="breakdown-item">
-                            <span class="breakdown-label">Best Lap:</span>
-                            <span class="breakdown-value" id="scoring-lap-display">--</span>
+                            <span class="breakdown-label">Laps:</span>
+                            <span class="breakdown-value" id="lap-count-display">--</span>
                         </div>
                         <div class="breakdown-item">
-                            <span class="breakdown-label">Best Lap Time:</span>
+                            <span class="breakdown-label">Total Lap Time:</span>
                             <span class="breakdown-value" id="base-time-display">0.000s</span>
                         </div>
-                        <div class="breakdown-item">
+                        <div class="breakdown-item" id="missed-count-item">
                             <span class="breakdown-label">Skipped Obstacles:</span>
                             <span class="breakdown-value" id="missed-count-display">0</span>
                         </div>
@@ -303,10 +303,15 @@
                 <h3 class="rules-section-title">5 - Scoring</h3>
 
                 <div class="rule-card">
+                    <h4>Final Score</h4>
+                    <p>On both courses the base time is the total time of all laps. Skipping the start signal adds a flat <strong>5 second</strong> penalty (applied once, to lap 1).</p>
+                </div>
+
+                <div class="rule-card">
                     <h4>Obstacle Course Penalty Formula</h4>
-                    <p>Missed obstacles incur an escalating penalty added to the base time:</p>
-                    <code class="formula">Final = Base Time + 15 &times; (N + MAX(N&minus;1, 0) &times; N / 2)</code>
-                    <p class="formula-note">where <em>N</em> = number of missed obstacles</p>
+                    <p>Missed obstacles are marked on each lap and counted together across all laps (the same obstacle missed on two laps counts as two). The escalating penalty is added to the base time:</p>
+                    <code class="formula">Penalty = 15 &times; (N + MAX(N&minus;1, 0) &times; N / 2)</code>
+                    <p class="formula-note">where <em>N</em> = total number of obstacles missed across all laps</p>
                     <table class="penalty-table">
                         <thead>
                             <tr><th>Missed Obstacles</th><th>Penalty (s)</th></tr>
@@ -314,10 +319,10 @@
                         <tbody>
                             <tr><td>0</td><td>0</td></tr>
                             <tr><td>1</td><td>15</td></tr>
-                            <tr><td>2</td><td>60</td></tr>
-                            <tr><td>3</td><td>135</td></tr>
-                            <tr><td>4</td><td>240</td></tr>
-                            <tr><td>5</td><td>375</td></tr>
+                            <tr><td>2</td><td>45</td></tr>
+                            <tr><td>3</td><td>90</td></tr>
+                            <tr><td>4</td><td>150</td></tr>
+                            <tr><td>5</td><td>225</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -375,32 +380,32 @@
                     <div class="update-date">March 31st, 2026</div>
                     <h3>Team Signups Close</h3>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">April 24th, 2026</div>
                     <h3>Seed Funding / Perception Component Acceptance Deadline</h3>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">May 1st, 2026</div>
                     <h3>Scoring Rules Update Release</h3>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">May 15th, 2026</div>
                     <h3>E-Stop Interface Rules Update Release</h3>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">June 1st, 2026</div>
                     <h3>Complete Optional Design Review</h3>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">June 1st, 2026</div>
                     <h3>Design Reviews Complete</h3>
                     <p>Required for teams accepting seed funding and/or perception component.</p>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">June 1st, 2026</div>
                     <h3>Obstacle Design Specifications Update Release</h3>
                 </div>
-                <div class="update-card  past">
+                <div class="update-card past">
                     <div class="update-date">June 30th, 2026</div>
                     <h3>Complete Team Purchases with CAT Funds</h3>
                 </div>
@@ -408,27 +413,27 @@
                     <div class="update-date">July 1st, 2026</div>
                     <h3>Q&amp;A Rules Update Release</h3>
                 </div>
-                <div class="update-card">
+                <div class="update-card past">
                     <div class="update-date">August 1st, 2026</div>
                     <h3>Q&amp;A Rules Update Release</h3>
                 </div>
-                <div class="update-card">
+                <div class="update-card past">
                     <div class="update-date">August 14th, 2026</div>
                     <h3>Complete Path Following Demo</h3>
                 </div>
-                <div class="update-card">
+                <div class="update-card past">
                     <div class="update-date">August 14th, 2026</div>
                     <h3>Movement Review Complete</h3>
                 </div>
-                <div class="update-card">
+                <div class="update-card past">
                     <div class="update-date">September 1st, 2026</div>
                     <h3>Final Rules Update Release</h3>
                 </div>
-                <div class="update-card">
+                <div class="update-card past">
                     <div class="update-date">September 23rd, 2026</div>
                     <h3>Complete Safety Review</h3>
                 </div>
-                <div class="update-card">
+                <div class="update-card past">
                     <div class="update-date">September 23rd, 2026</div>
                     <h3>Safety Reviews Complete</h3>
                 </div>

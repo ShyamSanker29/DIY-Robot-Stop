@@ -117,27 +117,28 @@ html, body {
     display: flex;
     flex-direction: column;
     border-right: 2px solid var(--border-color);
+    overflow-y: auto;
 }
 
 .stopwatch-section {
-    height: 65%;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     border-bottom: 2px solid var(--border-color);
     background: linear-gradient(135deg, var(--bg-panel) 0%, #1c1c0a 100%);
-    padding: 20px;
+    padding: 16px 20px;
 }
 
 .score-section {
-    height: 35%;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     background: linear-gradient(135deg, #1c1c0a 0%, var(--bg-panel) 100%);
-    padding: 20px;
+    padding: 16px 20px;
 }
 
 /* ===== Section Titles ===== */
@@ -156,7 +157,7 @@ html, body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     width: 100%;
     max-width: 660px;
 }
@@ -210,6 +211,10 @@ html, body {
     display: none;
 }
 
+.app-container.course-speed #missed-count-item {
+    display: none;
+}
+
 .app-container.course-speed .left-panel {
     width: 100%;
     border-right: none;
@@ -256,7 +261,7 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     width: 100%;
     max-width: 420px;
     flex-wrap: wrap;
@@ -332,7 +337,9 @@ html, body {
 
 .score-section .btn-save {
     max-width: 280px;
-    margin-top: 20px;
+    margin-top: 12px;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 .score-section .save-status {
@@ -409,7 +416,7 @@ html, body {
     font-weight: 700;
     color: var(--text-primary);
     text-shadow: 0 0 20px rgba(255, 214, 0, 0.35);
-    margin-bottom: 30px;
+    margin-bottom: 16px;
     letter-spacing: 2px;
 }
 
@@ -487,15 +494,42 @@ html, body {
     background: #fff176;
 }
 
+/* ===== Start Signal Toggle ===== */
+.btn-start-signal {
+    margin-top: 12px;
+    padding: 8px 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-start-signal:hover {
+    border-color: var(--accent-red);
+    color: var(--text-primary);
+}
+
+.btn-start-signal.active {
+    background: var(--tile-missed);
+    border-color: var(--accent-red);
+    color: var(--text-primary);
+}
+
 /* ===== Lap Times ===== */
 .lap-times-container {
     width: 100%;
     max-width: 420px;
-    margin-top: 20px;
+    margin-top: 12px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--border-color);
     border-radius: 10px;
-    max-height: 140px;
+    max-height: 120px;
     overflow-y: auto;
 }
 
@@ -532,11 +566,6 @@ html, body {
     border-bottom: none;
 }
 
-.lap-times-list li.best-lap {
-    color: var(--accent-yellow);
-    font-weight: 700;
-}
-
 .lap-times-list li .lap-number {
     color: var(--text-secondary);
     min-width: 50px;
@@ -553,11 +582,11 @@ html, body {
 /* ===== Final Score ===== */
 .final-score {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 4rem;
+    font-size: 3rem;
     font-weight: 700;
     color: var(--accent-yellow);
     text-shadow: 0 0 30px rgba(255, 214, 0, 0.3);
-    margin-bottom: 24px;
+    margin-bottom: 12px;
     transition: all 0.3s ease;
 }
 
@@ -572,20 +601,22 @@ html, body {
 }
 
 .score-breakdown {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 28px;
     background: rgba(0, 0, 0, 0.2);
-    padding: 16px 24px;
+    padding: 10px 20px;
     border-radius: 10px;
     border: 1px solid var(--border-color);
-    min-width: 280px;
+    width: 100%;
+    max-width: 420px;
 }
 
 .breakdown-item {
     display: flex;
     justify-content: space-between;
-    font-size: 0.95rem;
+    gap: 8px;
+    font-size: 0.9rem;
 }
 
 .breakdown-label {
@@ -762,10 +793,8 @@ html, body {
         font-size: 2.5rem;
     }
 
-    .stopwatch-section,
-    .score-section {
-        height: auto;
-        min-height: 250px;
+    .left-panel {
+        overflow-y: visible;
     }
 
     .challenges-grid {
@@ -774,6 +803,10 @@ html, body {
 }
 
 @media (max-width: 500px) {
+    .score-breakdown {
+        grid-template-columns: 1fr;
+    }
+
     .challenges-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;

@@ -2,7 +2,7 @@
 const CHALLENGES = [
     {
         id: 'steep-ramp',
-        name: 'Steep Ramp Up & Down',
+        name: 'Spiral Ramp',
         icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 56 L32 12 L56 56 Z" stroke="white" stroke-width="3" fill="none"/>
             <path d="M20 56 L32 24 L44 56" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)"/>
@@ -12,7 +12,7 @@ const CHALLENGES = [
     },
     {
         id: 'high-bank',
-        name: 'High Bank Section',
+        name: 'Banked Turn',
         icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 52 Q16 52 20 36 Q24 20 32 20 Q40 20 44 36 Q48 52 60 52" stroke="white" stroke-width="3" fill="none"/>
             <path d="M4 56 L60 56" stroke="white" stroke-width="2"/>
@@ -105,7 +105,7 @@ const CHALLENGES = [
     },
     {
         id: 'fixed-obstacles',
-        name: 'Fixed Obstacles (Buckets)',
+        name: 'Random Obstacles',
         icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Bucket 1 -->
             <path d="M10 28 L14 48 L30 48 L34 28 Z" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)"/>
@@ -119,7 +119,7 @@ const CHALLENGES = [
     },
     {
         id: 'loose-overhead',
-        name: 'Loose Material Overhead',
+        name: 'Carwash',
         icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Posts -->
             <line x1="12" y1="16" x2="12" y2="56" stroke="white" stroke-width="2.5"/>
@@ -191,6 +191,10 @@ let selectedTeam = '';
 // Entries are created lazily by getLapState().
 let lapSkips = [];
 let selectedLap = 0;       // lap index that obstacle clicks apply to
+// Set when the robot was started manually instead of from the visual start
+// signal. A flat penalty on both courses, charged to lap 1 only.
+let startSignalSkipped = false;
+const START_SIGNAL_PENALTY_S = 5;
 
 function getLapState(lap) {
     if (!lapSkips[lap]) {
@@ -207,13 +211,14 @@ const btnLap = document.getElementById('btn-lap');
 const btnStop = document.getElementById('btn-stop');
 const btnReset = document.getElementById('btn-reset');
 const finalScoreEl = document.getElementById('final-score');
-const scoringLapDisplay = document.getElementById('scoring-lap-display');
 const baseTimeDisplay = document.getElementById('base-time-display');
 const missedCountDisplay = document.getElementById('missed-count-display');
 const penaltyDisplay = document.getElementById('penalty-display');
 const challengesGrid = document.getElementById('challenges-grid');
 const lapTimesList = document.getElementById('lap-times-list');
 const lapSelect = document.getElementById('lap-select');
+const btnStartSignal = document.getElementById('btn-start-signal');
+const lapCountDisplay = document.getElementById('lap-count-display');
 const teamSelect = document.getElementById('team-select');
 const courseSelect = document.getElementById('course-select');
 const appContainer = document.querySelector('.app-container');
@@ -327,7 +332,9 @@ function resetStopwatch() {
     // Reset score
     finalScoreEl.textContent = '--:--';
     finalScoreEl.classList.remove('calculated');
-    scoringLapDisplay.textContent = '--';
+    lapCountDisplay.textContent = '--';
+    startSignalSkipped = false;
+    renderStartSignal();
     baseTimeDisplay.textContent = '0.000s';
     missedCountDisplay.textContent = '0';
     penaltyDisplay.textContent = '+0.000s';
@@ -549,13 +556,9 @@ function renderLaps() {
         return;
     }
 
-    // Highlight the lap that counts toward the score (best time after penalty).
-    const scoringLap = computeScore().lapIndex;
-
     lapTimes.forEach((lapMs, index) => {
-        const penaltyMs = Math.round(penaltySeconds(lapMissedCount(index)) * 1000);
+        const penaltyMs = Math.round(lapPenaltySeconds(index) * 1000);
         const li = document.createElement('li');
-        if (index === scoringLap) li.classList.add('best-lap');
         li.innerHTML = `
             <span class="lap-number">Lap ${index + 1}</span>
             <span class="lap-time">${formatTime(lapMs)}</span>
@@ -573,9 +576,16 @@ function renderLaps() {
 // Shared by the on-screen breakdown and the CSV export below, so the two can
 // never disagree and the export never depends on a cached, possibly-stale value.
 //
-// Each lap is penalized on its own skips, and the score is the best lap time
-// after penalty. Returns that lap's breakdown plus its zero-based lapIndex.
+// The score is the total time of all laps plus the penalty. Skips are marked per
+// lap but counted together across all laps (obstacle course only) before the
+// escalating formula is applied; the flat start-signal penalty applies on
+// either course and is shown on lap 1.
+function isObstacleCourse() {
+    return courseSelect.value !== 'speed';
+}
+
 function lapMissedCount(lap) {
+    if (!isObstacleCourse()) return 0;
     const state = getLapState(lap);
     return CHALLENGES.filter(c => state[c.id]).length;
 }
@@ -584,27 +594,39 @@ function penaltySeconds(numMissed) {
     return 15 * (numMissed + (Math.max(numMissed - 1, 0) * numMissed) / 2);
 }
 
+// Skips accumulate across laps before the escalating formula is applied, so a
+// lap's penalty is how much its skips raise the running total. The per-lap
+// penalties therefore always sum to penaltySeconds(total skips).
+function missedThroughLap(lap) {
+    let n = 0;
+    for (let i = 0; i <= lap; i++) n += lapMissedCount(i);
+    return n;
+}
+
+function lapPenaltySeconds(lap) {
+    const startS = lap === 0 && startSignalSkipped ? START_SIGNAL_PENALTY_S : 0;
+    const before = lap > 0 ? penaltySeconds(missedThroughLap(lap - 1)) : 0;
+    return startS + penaltySeconds(missedThroughLap(lap)) - before;
+}
+
 function computeScore() {
     // Before any lap is recorded, the running time stands in as a single lap.
     const laps = lapTimes.length ? lapTimes : [Math.floor(stopwatchElapsed)];
-    let best = null;
+    let baseTimeS = 0, numMissed = 0;
     laps.forEach((lapMs, lapIndex) => {
-        const baseTimeS = lapMs / 1000; // convert ms to seconds
-        const numMissed = lapMissedCount(lapIndex);
-        const penaltyS = penaltySeconds(numMissed);
-        const finalTimeS = baseTimeS + penaltyS;
-        if (!best || finalTimeS < best.finalTimeS) {
-            best = { lapIndex, baseTimeS, numMissed, penaltyS, finalTimeS };
-        }
+        baseTimeS += lapMs / 1000; // convert ms to seconds
+        numMissed += lapMissedCount(lapIndex);
     });
-    return best;
+    const startS = startSignalSkipped ? START_SIGNAL_PENALTY_S : 0;
+    const penaltyS = startS + penaltySeconds(numMissed);
+    return { lapCount: laps.length, baseTimeS, numMissed, penaltyS, finalTimeS: baseTimeS + penaltyS };
 }
 
 function calculateFinalScore() {
-    const { lapIndex, baseTimeS, numMissed, penaltyS, finalTimeS } = computeScore();
+    const { lapCount, baseTimeS, numMissed, penaltyS, finalTimeS } = computeScore();
 
     // Update breakdown
-    scoringLapDisplay.textContent = `Lap ${lapIndex + 1}`;
+    lapCountDisplay.textContent = `${lapCount}`;
     baseTimeDisplay.textContent = `${baseTimeS.toFixed(3)}s`;
     missedCountDisplay.textContent = `${numMissed}`;
     penaltyDisplay.textContent = `+${penaltyS.toFixed(3)}s`;
@@ -649,9 +671,22 @@ function toggleChallenge(id) {
     // Recalculate if stopwatch has been stopped
     if (hasStopped) {
         calculateFinalScore();
-        renderLaps(); // the scoring lap may have changed
     }
+    renderLaps(); // the lap's penalty changed
 }
+
+// ===== Start Signal =====
+function renderStartSignal() {
+    btnStartSignal.classList.toggle('active', startSignalSkipped);
+    btnStartSignal.setAttribute('aria-pressed', String(startSignalSkipped));
+}
+
+btnStartSignal.addEventListener('click', () => {
+    startSignalSkipped = !startSignalSkipped;
+    renderStartSignal();
+    if (hasStopped) calculateFinalScore();
+    renderLaps();
+});
 
 lapSelect.addEventListener('change', () => {
     selectedLap = parseInt(lapSelect.value, 10);
@@ -712,7 +747,10 @@ applyCourseSelection();
 // Not reset by RESET -- the course doesn't change between runs on the same
 // course, so clearing it on every reset would force re-selecting it constantly.
 function applyCourseSelection() {
-    appContainer.classList.toggle('course-speed', courseSelect.value === 'speed');
+    appContainer.classList.toggle('course-speed', !isObstacleCourse());
+    // Obstacle penalties only count on the obstacle course.
+    if (hasStopped) calculateFinalScore();
+    renderLaps();
 }
 
 courseSelect.addEventListener('change', applyCourseSelection);
@@ -754,20 +792,22 @@ function buildResultCsv() {
         const names = CHALLENGES.filter(c => state[c.id]).map(c => c.name);
         return names.length ? `Lap ${i + 1}: ${names.join(', ')}` : '';
     }).filter(Boolean);
-    const lapPenalties = lapIndexes.map(i => `Lap ${i + 1}: ${penaltySeconds(lapMissedCount(i)).toFixed(3)}`);
+    const lapPenalties = lapIndexes.map(i => `Lap ${i + 1}: ${lapPenaltySeconds(i).toFixed(3)}`);
     const header = [
-        'Timestamp', 'Team', 'Final Score', 'Final Score (s)', 'Scoring Lap',
-        'Base Time - Scoring Lap (s)', 'Skipped Obstacles (Scoring Lap)', 'Penalty (s)',
-        'Lap Times', 'Lap Penalties (s)', 'Skipped Obstacle Names (By Lap)',
+        'Timestamp', 'Team', 'Course', 'Final Score', 'Final Score (s)', 'Laps',
+        'Base Time - All Laps (s)', 'Skipped Obstacles (All Laps)', 'Start Signal Skipped',
+        'Penalty (s)', 'Lap Times', 'Lap Penalties (s)', 'Skipped Obstacle Names (By Lap)',
     ];
     const row = [
         new Date().toISOString(),
         selectedTeam,
+        isObstacleCourse() ? 'Obstacle' : 'Speed',
         formatTime(Math.floor(score.finalTimeS * 1000)),
         score.finalTimeS.toFixed(3),
-        score.lapIndex + 1,
+        score.lapCount,
         score.baseTimeS.toFixed(3),
         score.numMissed,
+        startSignalSkipped ? 'Yes' : 'No',
         score.penaltyS.toFixed(3),
         lapTimes.map(formatTime).join('; '),
         lapPenalties.join('; '),
