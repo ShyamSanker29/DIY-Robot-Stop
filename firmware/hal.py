@@ -1,13 +1,18 @@
 from estop_common import StopState, Button
 from machine import Pin, I2C
-import ssd1306
+import sh1106
 
 
 class DisplayDriver:
-    """Simpld driver for the SSD1306 based display using micropython libs. Mainly
+    """Simple driver for the SH1106 based display using micropython libs. Mainly
     to get device-specific code out of the hal class for cleanliness."""
-    def __init__(self, i2c: I2C, width: int, height: int, addr: int = 0x3C):
-        self._display = ssd1306.SSD1306_I2C(width, height, i2c, addr=addr)
+    def __init__(self, i2c: I2C, width: int, height: int, addr: int = 0x3C,
+                 flip: bool = False):
+        # No hardware reset line is wired on the I2C modules, so res=None.
+        self._display = sh1106.SH1106_I2C(width, height, i2c, res=None, addr=addr)
+        self._display.sleep(False)
+        # SH1106 modules differ in mounting orientation; flip if text is upside down.
+        self._display.rotate(flip, update=False)
 
     def clear(self):
         self._display.fill(0)
@@ -23,12 +28,14 @@ class DisplayDriver:
 class EStopHal:
     """Where hardware implementations live. Edit this class to modify hardware-specific behavior."""
     def __init__(self, button_map: dict[Button, Pin], relay_pin: int, display_i2c: I2C,
-                 display_addr: int = 0x3C, net_ssid: str = "", net_ip: str = ""):
+                 display_addr: int = 0x3C, display_flip: bool = False,
+                 net_ssid: str = "", net_ip: str = ""):
         # You can change the number of buttons by adding/removing pins from this
         # list.
         self._button_pins = button_map
         self._relay_pin = Pin(relay_pin, Pin.OUT)
-        self._display_driver = DisplayDriver(display_i2c, 128, 64, addr=display_addr)
+        self._display_driver = DisplayDriver(display_i2c, 128, 64, addr=display_addr,
+                                             flip=display_flip)
         # Network info shown on every display refresh. Set these after bringing
         # up the access point (see main.py).
         self._net_ssid = net_ssid

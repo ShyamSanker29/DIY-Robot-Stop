@@ -18,7 +18,7 @@
 from machine import Pin as _Pin
 from time import sleep_ms as _sleep_ms
 
-_RECOVERY_PIN = 45                 # GPIO the recovery button is on
+_RECOVERY_PIN = 15                 # GPIO the recovery button is on (GP45 does not exist on Pico 2 W)
 _RECOVERY_ACTIVE = 0               # pin level that means "pressed"
 _RECOVERY_PULL = _Pin.PULL_UP      # internal pull applied while reading
 _RECOVERY_WINDOW_MS = 1200         # watch for the hold this long after power-on
