@@ -485,6 +485,15 @@ html, body {
     background: #ffc400;
 }
 
+.btn-pause {
+    background: #40c4ff;
+    color: #1a1a1a;
+}
+
+.btn-pause:hover:not(:disabled) {
+    background: #80d8ff;
+}
+
 .btn-lap {
     background: var(--accent-yellow);
     color: #1a1a1a;

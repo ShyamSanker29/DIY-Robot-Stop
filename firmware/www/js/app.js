@@ -207,6 +207,7 @@ function getLapState(lap) {
 // ===== DOM References =====
 const stopwatchDisplay = document.getElementById('stopwatch-display');
 const btnStart = document.getElementById('btn-start');
+const btnPause = document.getElementById('btn-pause');
 const btnLap = document.getElementById('btn-lap');
 const btnStop = document.getElementById('btn-stop');
 const btnReset = document.getElementById('btn-reset');
@@ -257,6 +258,7 @@ function startStopwatch() {
     requestWakeLock();
 
     btnStart.disabled = true;
+    btnPause.disabled = false;
     btnLap.disabled = false;
     btnStop.disabled = false;
     btnReset.disabled = true;
@@ -278,6 +280,7 @@ function stopStopwatch() {
     recordLap();
 
     btnStart.disabled = estopStopped;
+    btnPause.disabled = true;
     btnLap.disabled = true;
     btnStop.disabled = true;
     btnReset.disabled = false;
@@ -285,11 +288,12 @@ function stopStopwatch() {
     calculateFinalScore();
 }
 
-// A held e-stop pauses a running stopwatch rather than ending the run: the
-// elapsed time freezes where it is, no lap is recorded, and the score isn't
-// finalized. STOP and LAP are disabled while paused; the operator resumes the
-// same run with START once every stop button is released, and startStopwatch()
-// picks up from the frozen stopwatchElapsed.
+// A held e-stop or the PAUSE button pauses a running stopwatch rather than
+// ending the run: the elapsed time freezes where it is, no lap is recorded, and
+// the score isn't finalized. STOP and LAP are disabled while paused; the
+// operator resumes the same run with START (once every stop button is released,
+// if the e-stop paused it), and startStopwatch() picks up from the frozen
+// stopwatchElapsed.
 function pauseStopwatch() {
     if (!isRunning) return;
     isRunning = false;
@@ -300,8 +304,12 @@ function pauseStopwatch() {
     // what we don't want. stopStopwatch()/resetStopwatch() release it.
     updateStopwatch(); // freeze the displayed time at the pause instant
 
-    // RESET becomes available; START/LAP/STOP are driven by applyEstopState()
-    // for as long as the e-stop is held.
+    // START resumes unless the e-stop is held; applyEstopState() keeps it
+    // disabled for as long as it is.
+    btnStart.disabled = estopStopped;
+    btnPause.disabled = true;
+    btnLap.disabled = true;
+    btnStop.disabled = true;
     btnReset.disabled = false;
 }
 
@@ -319,6 +327,7 @@ function resetStopwatch() {
     renderLaps();
 
     btnStart.disabled = estopStopped;
+    btnPause.disabled = true;
     btnLap.disabled = true;
     btnStop.disabled = true;
     btnReset.disabled = false;
@@ -429,6 +438,7 @@ function applyEstopState(stopped) {
     // the run actually resumes (startStopwatch() re-enables them).
     if (stopped) {
         btnStart.disabled = true;
+        btnPause.disabled = true;
         btnLap.disabled = true;
         btnStop.disabled = true;
     } else if (!isRunning) {
@@ -695,6 +705,7 @@ lapSelect.addEventListener('change', () => {
 
 // ===== Event Listeners =====
 btnStart.addEventListener('click', startStopwatch);
+btnPause.addEventListener('click', pauseStopwatch);
 btnLap.addEventListener('click', recordLap);
 btnStop.addEventListener('click', stopStopwatch);
 btnReset.addEventListener('click', resetStopwatch);
